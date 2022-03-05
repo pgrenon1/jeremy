@@ -1,0 +1,13 @@
+body {
+    margin: 0;
+    padding: 0;
+}
+
+canvas {
+    margin: auto;
+}
+
+@font-face {
+    font-family: "ua-square";
+    src: url("/fonts/UASQUARE.TTF");
+}

@@ -5,14 +5,31 @@ class Cell
         this.i = i;
         this.gridCoordinates = createVector(x, y);
         this.position = createVector(x * cellWidth + marginX, y * cellWidth + marginY);
-        this.left = this.position.x - cellWidth / 2;
-        this.right = this.position.x + cellWidth / 2;
-        this.top = this.position.y - cellWidth / 2;
-        this.bottom = this.position.y + cellWidth / 2;
+        this.left = this.position.x;
+        this.right = this.position.x + cellWidth;
+        this.top = this.position.y;
+        this.bottom = this.position.y + cellWidth;
         this.wasVisited = false;
         this.walls = [true, true, true, true]; // left, top, right, bottom
         this.isReserved = false;
         this.visitedColor = color(51, 51, 51, 51);
+        this.showWeight = false;
+        this.neighbours = [];
+    }
+
+    AddNeighbours()
+    {
+        directions.forEach(direction =>
+        {
+            let neighbour = this.GetNeighbour(direction.x, direction.y);
+
+            this.neighbours.push(neighbour);
+        });
+    }
+
+    GetNeighbour(xOffset, yOffset)
+    {
+        return GetCellAtCoordinates(this.gridCoordinates.x + xOffset, this.gridCoordinates.y + yOffset);
     }
 
     RemoveWallInDirection(direction)
@@ -59,9 +76,6 @@ class Cell
 
     Draw()
     {
-        fill(255);
-        // text(this.i, this.position.x, this.position.y);
-
         if (this.wasVisited)
             fill(this.visitedColor);
         else if (this.isReserved)
@@ -70,7 +84,7 @@ class Cell
             fill(25, 25, 25, 150);
 
         noStroke();
-        rect(this.position.x, this.position.y, cellWidth);
+        rect(this.left, this.top, cellWidth);
         stroke(0);
         strokeWeight(2);
 
@@ -85,6 +99,10 @@ class Cell
 
         if (this.walls[3])
             this.DrawBottom();
+
+        fill(255);
+        if (this.showWeight)
+            text(pfGrid.getWeightAt(this.gridCoordinates.x, this.gridCoordinates.y), this.position.x + cellWidth / 2, this.position.y + cellWidth / 2);
 
         fill(25);
     }

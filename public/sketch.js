@@ -9,35 +9,56 @@ let directions = [left, right, up, down];
 let walkerInterval = 0;
 let mouseDown = false;
 let mouseCell;
+let pfGrid;
+let reservedWeight = 0.1;
+
+document.getElementById('inputText').addEventListener('keyup', function ()
+{
+    pxxl("fonts/test.bdf", this.value, function (pixels)
+    {
+        Reset();
+
+        for (var p = 0, hue = 0; p < pixels.length; p++, hue++)
+        {
+            var pixel = pixels[p];
+            var cell = GetCellAtCoordinates(pixel.x, pixel.y);
+            ReserveCell(cell);
+        }
+    });
+}, false);
 
 function setup()
 {
     createCanvas(windowWidth, windowHeight);
 
-    up = createVector(0, 1);
-    down = createVector(0, -1);
-    left = createVector(-1, 0);
-    right = createVector(1, 0);
+    CreateSlider();
 
-    directions = [left, right, up, down];
+    left = createVector(-1, 0);
+    up = createVector(0, 1);
+    right = createVector(1, 0);
+    down = createVector(0, -1);
+
+    directions = [left, up, right, down];
 
     textAlign(CENTER, CENTER);
-    rectMode(CENTER)
 
     CreateGrid();
+
+    pfGrid = new PF.Grid(mazeWidth, mazeHeight);
 }
 
 function draw()
 {
     background(51, 25, 51);
-
     UpdateMouse();
+
+    UpdateSlider();
+
+    DrawCells();
 
     UpdateWalkers();
 
     DrawWalkers();
-
-    DrawCells();
 }
 
 function mousePressed()
@@ -58,6 +79,19 @@ function mouseReleased()
     mouseDown = false;
 }
 
+function CreateSlider()
+{
+    slider = createSlider(0, 100, 10);
+    slider.position(400, 10);
+    slider.style('width', '180px');
+}
+
+function UpdateSlider()
+{
+    let value = slider.value() / 100;
+    reservedWeight = value;
+}
+
 function UpdateMouse()
 {
     if (!mouseDown || keyIsDown(17)) // LEFT CTRL
@@ -67,26 +101,33 @@ function UpdateMouse()
     let y = PositionToYCoordinates(mouseY);
     let cell = GetCellAtCoordinates(x, y);
 
-    if (mouseCell != undefined && mouseCell != cell)
-    {
-        let direction = p5.Vector.sub(mouseCell.gridCoordinates, cell.gridCoordinates);
-        let inverseDirection = p5.Vector.mult(direction, -1);
-        cell.RemoveWallInDirection(direction);
-        mouseCell.RemoveWallInDirection(inverseDirection);
-        mouseCell.isReserved = true;
-    }
+    // if (mouseCell != undefined && mouseCell != cell)
+    // {
+    //     let direction = p5.Vector.sub(mouseCell.gridCoordinates, cell.gridCoordinates);
+    //     let inverseDirection = p5.Vector.mult(direction, -1);
+    //     cell.RemoveWallInDirection(direction);
+    //     mouseCell.RemoveWallInDirection(inverseDirection);
+    //     mouseCell.isReserved = true;
+    //     pfGrid.setWeightAt(mouseCell.gridCoordinates.x, mouseCell.gridCoordinates.y, 0.1);
+    // }
 
-    mouseCell = cell;
+    // mouseCell = cell;
+}
+
+function ReserveCell(cell)
+{
+    cell.isReserved = true;
+    pfGrid.setWeightAt(cell.gridCoordinates.x, cell.gridCoordinates.y, reservedWeight);
 }
 
 function PositionToXCoordinates(x)
 {
-    return int(map(x + cellWidth / 2, marginX, windowWidth, 0, mazeWidth));
+    return int(map(x, marginX, mazeWidth * cellWidth, 0, mazeWidth));
 }
 
 function PositionToYCoordinates(y)
 {
-    return int(map(y + cellWidth / 2, marginY, windowHeight, 0, mazeHeight));
+    return int(map(y, marginY, mazeHeight * cellWidth, 0, mazeHeight));
 }
 
 function CreateWalker(x, y)
@@ -123,8 +164,8 @@ function DrawWalkers()
 
 function CreateGrid()
 {
-    mazeWidth = int((windowWidth - marginX) / cellWidth);
-    mazeHeight = int((windowHeight - marginY) / cellWidth);
+    mazeWidth = int((width - marginX) / cellWidth);
+    mazeHeight = int((height - marginY) / cellWidth);
 
     let i = 0;
     for (let y = 0; y < mazeHeight; y++)
@@ -138,6 +179,19 @@ function CreateGrid()
             i++;
         }
     }
+
+    for (let i = 0; i < grid.length; i++)
+    {
+        const cell = grid[i];
+        cell.AddNeighbours();
+    }
+}
+
+function Reset()
+{
+    grid = [];
+    walkers = [];
+    CreateGrid();
 }
 
 function CreateCell(i, x, y)
@@ -147,22 +201,42 @@ function CreateCell(i, x, y)
 
 function GetCellAtCoordinates(x, y)
 {
+    if (!IsInGrid(x, y))
+        return null;
+
     return grid[GetIndex(x, y)];
 }
 
 function GetIndex(x, y)
 {
-    let index = x + int(mazeWidth * y);
-    return index;
-}
+    let index = x + mazeWidth * y;
 
-function GetNeighbour(cell, x, y)
-{
-    let index = GetIndex(cell.x + x, cell.y + y);
-    return grid[index];
+    return index;
 }
 
 function IsInGrid(x, y)
 {
-    return x >= 0 && x < mazeWidth && y >= 0 && y < mazeHeight;
+    let inGrid = x >= 0 && x < mazeWidth && y >= 0 && y < mazeHeight;
+
+    return inGrid;
+}
+
+function RemoveWalls(cellA, cellB)
+{
+    let direction = p5.Vector.sub(cellB.gridCoordinates, cellA.gridCoordinates);
+    let inverseDirection = p5.Vector.mult(direction, -1);
+
+    cellA.RemoveWallInDirection(direction);
+    cellB.RemoveWallInDirection(inverseDirection);
+}
+
+function RemoveFromArray(arr, elt)
+{
+    for (var i = arr.length - 1; i >= 0; i--)
+    {
+        if (arr[i] == elt)
+        {
+            arr.splice(i, 1);
+        }
+    }
 }

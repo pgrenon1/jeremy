@@ -2,24 +2,22 @@
 <html>
 
 <head>
+    <link rel="preload" href="/fonts/UASQUARE.TTF" as="font" crossorigin="anonymous" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>jeremy</title>
+    <canvas id="textCanvas" width="200" height="100" style=" border:1px solid #000000; display: none;"></canvas>
+    <img id='outputImage'>
+    <textarea id='inputText'
+        style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif; font-size: 20pt;"></textarea>
+
+    <script src="libraries/pathfinding-browser-weights.js"></script>
     <script src="libraries/p5.js"></script>
-    <!-- <script src="libraries/p5.sound.js"></script> -->
+    <script src="libraries/pxxl.min.js"></script>
     <script src="sketch.js"></script>
     <script src="cell.js"></script>
     <script src="walker.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-        }
-
-        canvas {
-            margin: auto;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body></body>
