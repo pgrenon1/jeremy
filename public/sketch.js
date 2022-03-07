@@ -10,13 +10,32 @@ let walkerInterval = 0;
 let mouseDown = false;
 let mouseCell;
 let pfGrid;
-let reservedWeight = 0.1;
+let reservedWeight = 0;
 
 document.getElementById('inputText').addEventListener('keyup', function ()
 {
-    pxxl("fonts/test.bdf", this.value, function (pixels)
+    let text = this.value;
+
+    pxxl("fonts/test.bdf", text, function (pixels)
     {
         Reset();
+
+        if (text == "")
+            return;
+
+        mazeWidth = pixels.reduce(function (prev, current)
+        {
+            return (prev.x > current.x) ? prev : current
+        }).x + 2;
+
+        mazeHeight = pixels.reduce(function (prev, current)
+        {
+            return (prev.y > current.y) ? prev : current
+        }).y + 5;
+
+        createCanvas(mazeWidth * cellWidth + marginX * 2, windowHeight);
+
+        InitGrid();
 
         for (var p = 0, hue = 0; p < pixels.length; p++, hue++)
         {
@@ -24,14 +43,14 @@ document.getElementById('inputText').addEventListener('keyup', function ()
             var cell = GetCellAtCoordinates(pixel.x, pixel.y);
             ReserveCell(cell);
         }
+
+        CreateMaze();
     });
 }, false);
 
 function setup()
 {
     createCanvas(windowWidth, windowHeight);
-
-    CreateSlider();
 
     left = createVector(-1, 0);
     up = createVector(0, 1);
@@ -41,18 +60,11 @@ function setup()
     directions = [left, up, right, down];
 
     textAlign(CENTER, CENTER);
-
-    CreateGrid();
-
-    pfGrid = new PF.Grid(mazeWidth, mazeHeight);
 }
 
 function draw()
 {
     background(51, 25, 51);
-    UpdateMouse();
-
-    UpdateSlider();
 
     DrawCells();
 
@@ -61,57 +73,76 @@ function draw()
     DrawWalkers();
 }
 
-function mousePressed()
-{
-    mouseDown = true;
+// function mousePressed()
+// {
+//     mouseDown = true;
 
-    if (keyIsDown(17)) // LEFT CTRL
-    {
-        let x = PositionToXCoordinates(mouseX);
-        let y = PositionToYCoordinates(mouseY);
+//     if (keyIsDown(17)) // LEFT CTRL
+//     {
+//         let x = PositionToXCoordinates(mouseX);
+//         let y = PositionToYCoordinates(mouseY);
 
-        CreateWalker(x, y);
-    }
-}
+
+//     }
+// }
 
 function mouseReleased()
 {
     mouseDown = false;
 }
 
-function CreateSlider()
+function CreateMaze()
 {
-    slider = createSlider(0, 100, 10);
-    slider.position(400, 10);
-    slider.style('width', '180px');
+    let firstWalker = new Walker(0, 0, walkerInterval, false, CreateRandomWalkers);
+    walkers.push(firstWalker);
+    firstWalker.Start();
 }
 
-function UpdateSlider()
+function CreateRandomWalkers()
 {
-    let value = slider.value() / 100;
-    reservedWeight = value;
+    let count = 0;
+    for (let x = 0; x < mazeWidth; ++x)
+    {
+        for (let y = 0; y < mazeHeight; ++y)
+        {
+            let cell = GetCellAtCoordinates(x, y);
+            if (!cell.wasVisited && !cell.tested)
+            {
+                DFS(cell);
+                count++;
+                console.log(x, y);
+                let randomWalker = new Walker(x, y, walkerInterval, true, null);
+                walkers.push(randomWalker);
+                randomWalker.Start();
+            }
+        }
+    }
+    console.log(count);
 }
 
-function UpdateMouse()
+function DFS(cell, visited)
 {
-    if (!mouseDown || keyIsDown(17)) // LEFT CTRL
-        return;
+    // These arrays are used to get row and column numbers
+    // of 8 neighbors of a given cell
+    let rowNbr = [-1, -1, -1, 0, 0, 1, 1, 1];
+    let colNbr = [-1, 0, 1, -1, 1, -1, 0, 1];
 
-    let x = PositionToXCoordinates(mouseX);
-    let y = PositionToYCoordinates(mouseY);
-    let cell = GetCellAtCoordinates(x, y);
+    // Mark this cell as visited
+    cell.tested = true;
 
-    // if (mouseCell != undefined && mouseCell != cell)
-    // {
-    //     let direction = p5.Vector.sub(mouseCell.gridCoordinates, cell.gridCoordinates);
-    //     let inverseDirection = p5.Vector.mult(direction, -1);
-    //     cell.RemoveWallInDirection(direction);
-    //     mouseCell.RemoveWallInDirection(inverseDirection);
-    //     mouseCell.isReserved = true;
-    //     pfGrid.setWeightAt(mouseCell.gridCoordinates.x, mouseCell.gridCoordinates.y, 0.1);
-    // }
+    // Recur for all connected neighbours
+    for (let i = 0; i < cell.neighbours.length; i++)
+    {
+        let neighbour = cell.neighbours[i];
 
-    // mouseCell = cell;
+        if (neighbour == null)
+            continue;
+
+        if (!neighbour.wasVisited && !neighbour.tested)
+        {
+            DFS(neighbour);
+        }
+    }
 }
 
 function ReserveCell(cell)
@@ -128,11 +159,6 @@ function PositionToXCoordinates(x)
 function PositionToYCoordinates(y)
 {
     return int(map(y, marginY, mazeHeight * cellWidth, 0, mazeHeight));
-}
-
-function CreateWalker(x, y)
-{
-    walkers.push(new Walker(x, y, walkerInterval));
 }
 
 function DrawCells()
@@ -162,11 +188,8 @@ function DrawWalkers()
     }
 }
 
-function CreateGrid()
+function InitGrid()
 {
-    mazeWidth = int((width - marginX) / cellWidth);
-    mazeHeight = int((height - marginY) / cellWidth);
-
     let i = 0;
     for (let y = 0; y < mazeHeight; y++)
     {
@@ -185,13 +208,14 @@ function CreateGrid()
         const cell = grid[i];
         cell.AddNeighbours();
     }
+
+    pfGrid = new PF.Grid(mazeWidth, mazeHeight);
 }
 
 function Reset()
 {
     grid = [];
     walkers = [];
-    CreateGrid();
 }
 
 function CreateCell(i, x, y)

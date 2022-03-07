@@ -15,6 +15,7 @@ class Cell
         this.visitedColor = color(51, 51, 51, 51);
         this.showWeight = false;
         this.neighbours = [];
+        this.tested = false;
     }
 
     AddNeighbours()
@@ -22,7 +23,6 @@ class Cell
         directions.forEach(direction =>
         {
             let neighbour = this.GetNeighbour(direction.x, direction.y);
-
             this.neighbours.push(neighbour);
         });
     }
