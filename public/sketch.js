@@ -1,8 +1,8 @@
 let cellWidth = 25;
 let mazeWidth, mazeHeight;
 let grid = [];
-let marginX = 20;
-let marginY = 20;
+let marginX = 0;
+let marginY = 0;
 let walkers = [];
 let left, right, up, down;
 let directions = [left, right, up, down];
@@ -11,11 +11,82 @@ let mouseDown = false;
 let mouseCell;
 let pfGrid;
 let reservedWeight = 0;
+let mousePath = []
+let canvas;
+let showLoading = true;
+let showMaze = true;
+let bgText;
+let bgColor;
 
-document.getElementById('inputText').addEventListener('keyup', function ()
+function setup()
 {
-    let text = this.value;
+    bgColor = color(15, 15, 15);
 
+    canvas = createCanvas(windowWidth, windowHeight);
+
+    left = createVector(-1, 0);
+    up = createVector(0, -1);
+    right = createVector(1, 0);
+    down = createVector(0, 1);
+
+    directions = [left, up, right, down];
+
+    textAlign(CENTER, CENTER);
+
+    let urlParams = getURLParams();
+    let text = urlParams.text;
+    if (text != undefined)
+    {
+        CreateMaze(decodeURIComponent(text));
+    }
+    else
+    {
+        CreateMaze("brother");
+    }
+
+    let makingof = urlParams.makingof;
+    if (makingof != undefined)
+    {
+        showLoading = makingof != "true";
+    }
+}
+
+function draw()
+{
+    if (!showMaze)
+    {
+        canvas.style("display", "none");
+        return;
+    }
+
+    clear();
+
+    DrawMargins();
+
+    DrawCells();
+
+    UpdateWalkers();
+
+    DrawWalkers();
+
+    UpdateMouse();
+
+    if (showLoading)
+        DrawForeground();
+}
+
+function DrawMargins()
+{
+    noStroke();
+    fill(bgColor);
+    rect(0, 0, width, marginY);
+    rect(0, 0, marginX, height);
+    rect(0, height - marginY, width, marginY);
+    rect(width - marginX, 0, marginX, height);
+}
+
+function CreateMaze(text)
+{
     pxxl("fonts/test.bdf", text, function (pixels)
     {
         Reset();
@@ -33,7 +104,12 @@ document.getElementById('inputText').addEventListener('keyup', function ()
             return (prev.y > current.y) ? prev : current
         }).y + 5;
 
-        createCanvas(mazeWidth * cellWidth + marginX * 2, windowHeight);
+        canvas = createCanvas(windowWidth, windowHeight);
+
+        marginX = width / 2 - mazeWidth * cellWidth / 2;
+        marginY = height / 2 - mazeHeight * cellWidth / 2;
+
+        bgText = document.getElementById('bgText');
 
         InitGrid();
 
@@ -44,54 +120,93 @@ document.getElementById('inputText').addEventListener('keyup', function ()
             ReserveCell(cell);
         }
 
-        CreateMaze();
+        FillMaze();
+
+        ShowBGText();
     });
-}, false);
-
-function setup()
-{
-    createCanvas(windowWidth, windowHeight);
-
-    left = createVector(-1, 0);
-    up = createVector(0, 1);
-    right = createVector(1, 0);
-    down = createVector(0, -1);
-
-    directions = [left, up, right, down];
-
-    textAlign(CENTER, CENTER);
 }
 
-function draw()
+function ShowBGText()
 {
-    background(51, 25, 51);
-
-    DrawCells();
-
-    UpdateWalkers();
-
-    DrawWalkers();
+    bgText.style.display = "flex";
+    bgText.style.width = canvas.width;
+    bgText.style.height = canvas.height;
 }
 
-// function mousePressed()
-// {
-//     mouseDown = true;
+function DrawForeground()
+{
+    if (walkers.length == 0 || walkers.some((walker) => { return walker.isWalking; }))
+    {
+        background(bgColor);
 
-//     if (keyIsDown(17)) // LEFT CTRL
-//     {
-//         let x = PositionToXCoordinates(mouseX);
-//         let y = PositionToYCoordinates(mouseY);
-
-
-//     }
-// }
+        fill(255);
+        textSize(25);
+        let visitedCells = 0;
+        for (let i = 0; i < grid.length; i++)
+        {
+            const cell = grid[i];
+            if (cell.wasVisited)
+                visitedCells++;
+        }
+        let percent = visitedCells / grid.length;
+        text("LOADING " + Math.round(percent * 100) + "%", width / 2, height / 2);
+    }
+}
 
 function mouseReleased()
 {
     mouseDown = false;
+    mousePath = [];
 }
 
-function CreateMaze()
+function mousePressed()
+{
+    mouseDown = true;
+
+    if (mousePath.length == 0)
+    {
+        if (grid.length > 0 && grid[0].PositionIsInBounds(mouseX, mouseY))
+        {
+            mousePath.push(grid[0]);
+        }
+    }
+}
+
+function UpdateMouse()
+{
+    if (!mouseDown)
+        return;
+
+    if (mousePath.length == 0)
+        return;
+
+    for (let i = 0; i < mousePath.length; i++)
+    {
+        const cell = mousePath[i];
+
+        for (let j = 0; j < cell.neighbours.length; j++)
+        {
+            const neighbour = cell.neighbours[j];
+
+            if (neighbour == undefined)
+                continue;
+
+            if (!cell.IsConnected(neighbour))
+                continue;
+
+            if (neighbour.PositionIsInBounds(mouseX, mouseY) && !mousePath.includes(neighbour))
+            {
+                mousePath.push(neighbour);
+                if (neighbour == grid[grid.length - 1])
+                {
+                    showMaze = false;
+                }
+            }
+        }
+    }
+}
+
+function FillMaze()
 {
     let firstWalker = new Walker(0, 0, walkerInterval, false, CreateRandomWalkers);
     walkers.push(firstWalker);
@@ -110,14 +225,12 @@ function CreateRandomWalkers()
             {
                 DFS(cell);
                 count++;
-                console.log(x, y);
                 let randomWalker = new Walker(x, y, walkerInterval, true, null);
                 walkers.push(randomWalker);
                 randomWalker.Start();
             }
         }
     }
-    console.log(count);
 }
 
 function DFS(cell, visited)
@@ -159,6 +272,11 @@ function PositionToXCoordinates(x)
 function PositionToYCoordinates(y)
 {
     return int(map(y, marginY, mazeHeight * cellWidth, 0, mazeHeight));
+}
+
+function PositionToCoordinates(x, y)
+{
+    return createVector(PositionToXCoordinates(x), PositionToYCoordinates(y));
 }
 
 function DrawCells()

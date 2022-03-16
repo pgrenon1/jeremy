@@ -8,13 +8,12 @@ class Walker
         this.visited = [];
         this.currentCell = GetCellAtCoordinates(x, y);
         this.isWalking = false;
-        this.visitedColor = color(51, 51, 51)//color(random(0, 255), random(0, 255), random(0, 255));
         this.random = isRandom;
         this.path = [];
         this.end = grid[grid.length - 1];
         this.isTextWalker = walkers.length == 0;
         this.breakOnNewPath = false;
-        this.maxSearchDistance = 15;
+        this.maxSearchDistance = 20;
         this.onComplete = onComplete;
     }
 
@@ -22,6 +21,7 @@ class Walker
     {
         if (this.onComplete)
             this.onComplete();
+
         this.isWalking = false;
     }
 
@@ -106,7 +106,6 @@ class Walker
     Walk()
     {
         this.currentCell.wasVisited = true;
-        this.currentCell.visitedColor = this.visitedColor;
 
         if (this.currentCell == this.end)
         {
